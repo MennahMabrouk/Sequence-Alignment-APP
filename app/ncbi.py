@@ -5,6 +5,7 @@ import requests
 NCBI_SEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 NCBI_FETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
+# Function to search NCBI database with a query
 def search_ncbi(query, db="nucleotide", retmax=5):
     """Search NCBI database with a query"""
     params = {
@@ -25,6 +26,7 @@ def search_ncbi(query, db="nucleotide", retmax=5):
         st.error("Failed to retrieve data from NCBI. Please try again later.")
         return None
 
+# Function to fetch data for given NCBI IDs
 def fetch_ncbi_data(id_list, db="nucleotide"):
     """Fetch data for the given NCBI IDs"""
     ids = ",".join(id_list)
@@ -46,14 +48,17 @@ def fetch_ncbi_data(id_list, db="nucleotide"):
         st.error("Failed to fetch data from NCBI. Please try again later.")
         return None
 
-# Main Streamlit app
+# Main Streamlit app function
 def main():
     st.title("NCBI Gene/Sequence Search")
     
-    # Input field for gene name or term
-    query = st.text_input("Enter a term (e.g., ADHD, depression, partial sequence):")
+    # State to store the current query
+    if 'query' not in st.session_state:
+        st.session_state.query = ''
     
-    if st.button("Search"):
+    # Function to trigger search when "Enter" is pressed
+    def on_query_change():
+        query = st.session_state.query
         if query:
             with st.spinner("Searching NCBI for relevant data..."):
                 # Search NCBI for the query in the nucleotide database
@@ -76,4 +81,11 @@ def main():
                         st.warning("No relevant results found for the query.")
         else:
             st.error("Please enter a search term.")
+    
+    # Input field for gene name or term, with on_change to search when pressing Enter
+    st.text_input("Enter a term (e.g., ADHD, depression, partial sequence):", 
+                  key='query', 
+                  on_change=on_query_change)
 
+if __name__ == "__main__":
+    main()
