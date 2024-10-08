@@ -1,81 +1,67 @@
 import streamlit as st
 import requests
-import time
 
-# Define the base URL for BLAST API
-BLAST_API_URL = "https://blast.ncbi.nlm.nih.gov/Blast.cgi"
+# Define the base URL for NCBI E-utilities API
+NCBI_SEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+NCBI_FETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
-# Function to validate if a sequence is a valid DNA sequence
-def is_valid_dna(sequence):
-    valid_bases = set("ATCGatcg")  # DNA can only contain A, T, C, G
-    return all(base in valid_bases for base in sequence)
-
-def submit_blast_search(query):
-    """Submit a BLAST search and return the Request ID (RID)"""
+def search_ncbi(query, db="nucleotide", retmax=5):
+    """Search NCBI database with a query"""
     params = {
-        "CMD": "Put",
-        "QUERY": query,
-        "PROGRAM": "blastn",  # Default to DNA BLAST
-        "DATABASE": "nt",     # Default to nucleotide database
-        "FORMAT_TYPE": "JSON2"  # Return results in JSON2 format
+        "db": db,           # Database to search (e.g., nucleotide, gene)
+        "term": query,      # The search query
+        "retmax": retmax,   # Number of results to return
+        "retmode": "json",  # Return results in JSON format
     }
-    response = requests.get(BLAST_API_URL, params=params)
-    
-    # Check if response was successful
+    response = requests.get(NCBI_SEARCH_URL, params=params)
     if response.status_code == 200:
-        return response.text.split("RID = ")[1].split("\n")[0]
+        return response.json()
     else:
-        st.error("Failed to submit BLAST search. Please check your inputs.")
+        st.error("Failed to retrieve data from NCBI. Please try again later.")
         return None
 
-def check_blast_status(rid):
-    """Check the status of a submitted BLAST job using the RID"""
+def fetch_ncbi_data(id_list, db="nucleotide"):
+    """Fetch data for the given NCBI IDs"""
+    ids = ",".join(id_list)
     params = {
-        "CMD": "Get",
-        "RID": rid,
-        "FORMAT_TYPE": "JSON2"
+        "db": db,
+        "id": ids,
+        "retmode": "text",  # Can be set to "xml" or "text" depending on need
+        "rettype": "fasta"  # Return FASTA sequence data
     }
-    response = requests.get(BLAST_API_URL, params=params)
-    
-    if "Status=WAITING" in response.text:
-        return False  # Still waiting
-    elif "Status=FAILED" in response.text:
-        return "Failed"
+    response = requests.get(NCBI_FETCH_URL, params=params)
+    if response.status_code == 200:
+        return response.text
     else:
-        return response.json()
+        st.error("Failed to fetch data from NCBI. Please try again later.")
+        return None
 
 # Main Streamlit app
 def main():
-    st.title("NCBI DNA Sequence Search")
+    st.title("NCBI Gene/Sequence Search")
     
-    # Input field for DNA sequence
-    query = st.text_area("Enter your DNA Sequence (FASTA format):")
+    # Input field for gene name or term
+    query = st.text_input("Enter a term (e.g., ADHD, depression, partial sequence):")
     
-    if st.button("Submit Search"):
+    if st.button("Search"):
         if query:
-            if is_valid_dna(query):
-                with st.spinner("Submitting BLAST search..."):
-                    rid = submit_blast_search(query)
+            with st.spinner("Searching NCBI for relevant data..."):
+                # Search NCBI for the query in the nucleotide database
+                search_results = search_ncbi(query)
+                
+                if search_results and "esearchresult" in search_results:
+                    id_list = search_results["esearchresult"].get("idlist", [])
                     
-                    if rid:
-                        st.success(f"BLAST search submitted successfully! RID: {rid}")
+                    if id_list:
+                        st.success(f"Found {len(id_list)} results. Fetching data...")
                         
-                        # Check the status of the search
-                        st.write("Checking BLAST search status...")
-                        time.sleep(2)  # Wait a bit before checking status
+                        # Fetch data for the first few IDs
+                        fasta_data = fetch_ncbi_data(id_list)
                         
-                        status = check_blast_status(rid)
-                        while status == False:
-                            st.write("BLAST search still processing. Checking again in 10 seconds...")
-                            time.sleep(10)
-                            status = check_blast_status(rid)
-                        
-                        if status == "Failed":
-                            st.error("BLAST search failed.")
-                        else:
-                            st.success("BLAST search completed!")
-                            st.json(status)
-            else:
-                st.error("Invalid DNA sequence. Please enter a sequence containing only A, T, C, G.")
+                        # Display the fetched FASTA data
+                        st.text_area("FASTA Sequence Data", fasta_data, height=300)
+                    else:
+                        st.warning("No relevant results found for the query.")
         else:
-            st.error("Please enter a DNA sequence in FASTA format.")
+            st.error("Please enter a search term.")
+
