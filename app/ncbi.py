@@ -5,6 +5,11 @@ import time
 # Define the base URL for BLAST API
 BLAST_API_URL = "https://blast.ncbi.nlm.nih.gov/Blast.cgi"
 
+# Function to validate if a sequence is a valid DNA sequence
+def is_valid_dna(sequence):
+    valid_bases = set("ATCGatcg")  # DNA can only contain A, T, C, G
+    return all(base in valid_bases for base in sequence)
+
 def submit_blast_search(query, program, database, expect=10, word_size=11):
     """Submit a BLAST search and return the Request ID (RID)"""
     params = {
@@ -54,27 +59,29 @@ def main():
     
     if st.button("Submit Search"):
         if query:
-            with st.spinner("Submitting BLAST search..."):
-                rid = submit_blast_search(query, program, database, expect=expect_value, word_size=word_size)
-                
-                if rid:
-                    st.success(f"BLAST search submitted successfully! RID: {rid}")
+            if is_valid_dna(query):
+                with st.spinner("Submitting BLAST search..."):
+                    rid = submit_blast_search(query, program, database, expect=expect_value, word_size=word_size)
                     
-                    # Check the status of the search
-                    st.write("Checking BLAST search status...")
-                    time.sleep(2)  # Wait a bit before checking status
-                    
-                    status = check_blast_status(rid)
-                    while status == False:
-                        st.write("BLAST search still processing. Checking again in 10 seconds...")
-                        time.sleep(10)
+                    if rid:
+                        st.success(f"BLAST search submitted successfully! RID: {rid}")
+                        
+                        # Check the status of the search
+                        st.write("Checking BLAST search status...")
+                        time.sleep(2)  # Wait a bit before checking status
+                        
                         status = check_blast_status(rid)
-                    
-                    if status == "Failed":
-                        st.error("BLAST search failed.")
-                    else:
-                        st.success("BLAST search completed!")
-                        st.json(status)
+                        while status == False:
+                            st.write("BLAST search still processing. Checking again in 10 seconds...")
+                            time.sleep(10)
+                            status = check_blast_status(rid)
+                        
+                        if status == "Failed":
+                            st.error("BLAST search failed.")
+                        else:
+                            st.success("BLAST search completed!")
+                            st.json(status)
+            else:
+                st.error("Invalid DNA sequence. Please enter a sequence containing only A, T, C, G.")
         else:
             st.error("Please enter a DNA sequence in FASTA format.")
-
