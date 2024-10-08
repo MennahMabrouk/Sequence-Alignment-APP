@@ -10,15 +10,13 @@ def is_valid_dna(sequence):
     valid_bases = set("ATCGatcg")  # DNA can only contain A, T, C, G
     return all(base in valid_bases for base in sequence)
 
-def submit_blast_search(query, program, database, expect=10, word_size=11):
+def submit_blast_search(query):
     """Submit a BLAST search and return the Request ID (RID)"""
     params = {
         "CMD": "Put",
         "QUERY": query,
-        "PROGRAM": program,
-        "DATABASE": database,
-        "EXPECT": expect,
-        "WORD_SIZE": word_size,
+        "PROGRAM": "blastn",  # Default to DNA BLAST
+        "DATABASE": "nt",     # Default to nucleotide database
         "FORMAT_TYPE": "JSON2"  # Return results in JSON2 format
     }
     response = requests.get(BLAST_API_URL, params=params)
@@ -48,20 +46,16 @@ def check_blast_status(rid):
 
 # Main Streamlit app
 def main():
-    st.title("NCBI BLAST Search App")
+    st.title("NCBI DNA Sequence Search")
     
-    # Input fields
+    # Input field for DNA sequence
     query = st.text_area("Enter your DNA Sequence (FASTA format):")
-    program = st.selectbox("Select BLAST Program", ["blastn", "blastp", "blastx", "tblastn", "tblastx"])
-    database = st.selectbox("Select Database", ["nt", "nr", "swissprot", "pdb", "env_nr"])
-    expect_value = st.number_input("Expect Value (E-value)", value=10.0)
-    word_size = st.number_input("Word Size", value=11)
     
     if st.button("Submit Search"):
         if query:
             if is_valid_dna(query):
                 with st.spinner("Submitting BLAST search..."):
-                    rid = submit_blast_search(query, program, database, expect=expect_value, word_size=word_size)
+                    rid = submit_blast_search(query)
                     
                     if rid:
                         st.success(f"BLAST search submitted successfully! RID: {rid}")
