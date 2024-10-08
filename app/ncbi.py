@@ -63,9 +63,11 @@ def main():
                     id_list = search_results["esearchresult"].get("idlist", [])
                     
                     if id_list:
-                        st.success(f"Found {len(id_list)} results. Fetching data...")
+                        # Limit to the first two IDs
+                        id_list = id_list[:2]  # Take the first two results
+                        st.success(f"Found {len(id_list)} results. Fetching data for the first two...")
                         
-                        # Fetch data for the first few IDs
+                        # Fetch data for the first two IDs
                         fasta_data = fetch_ncbi_data(id_list)
                         
                         # Display the fetched FASTA data
