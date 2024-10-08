@@ -14,7 +14,12 @@ def search_ncbi(query, db="nucleotide", retmax=5):
         "retmode": "json",  # Return results in JSON format
     }
     response = requests.get(NCBI_SEARCH_URL, params=params)
+    
+    # Debugging: print the raw URL for checking
+    st.write(f"Search URL: {response.url}")
+    
     if response.status_code == 200:
+        st.write(f"Search Response: {response.json()}")  # Debugging: Show the full response
         return response.json()
     else:
         st.error("Failed to retrieve data from NCBI. Please try again later.")
@@ -30,7 +35,12 @@ def fetch_ncbi_data(id_list, db="nucleotide"):
         "rettype": "fasta"  # Return FASTA sequence data
     }
     response = requests.get(NCBI_FETCH_URL, params=params)
+    
+    # Debugging: print the raw URL for checking
+    st.write(f"Fetch URL: {response.url}")
+    
     if response.status_code == 200:
+        st.write(f"Fetch Response: {response.text[:500]}...")  # Debugging: Show a part of the fetched data
         return response.text
     else:
         st.error("Failed to fetch data from NCBI. Please try again later.")
