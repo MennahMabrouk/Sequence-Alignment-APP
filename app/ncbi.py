@@ -1,17 +1,16 @@
 import streamlit as st
 import requests
 
-# Define the base URL for NCBI E-utilities API
+# Define NCBI E-utilities API endpoints
 NCBI_SEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 NCBI_SUMMARY_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 NCBI_FETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
 
-# Function to search NCBI database with a query
 def search_ncbi(query, db="nucleotide", retmax=5):
-    """Search NCBI database with a query"""
+    """Search NCBI database using the esearch API."""
     params = {
         "db": db,           # Database to search (e.g., nucleotide, gene)
-        "term": query,      # The search query
+        "term": query,      # Search term
         "retmax": retmax,   # Number of results to return
         "retmode": "json",  # Return results in JSON format
     }
@@ -23,9 +22,8 @@ def search_ncbi(query, db="nucleotide", retmax=5):
         st.error("Failed to retrieve data from NCBI. Please try again later.")
         return None
 
-# Function to fetch gene metadata (like gene name) from NCBI using esummary
 def fetch_ncbi_summary(id_list, db="nucleotide"):
-    """Fetch gene metadata (summary) for the given NCBI IDs"""
+    """Fetch gene metadata (gene name) for the given NCBI IDs using esummary."""
     ids = ",".join(id_list)
     params = {
         "db": db,
@@ -35,20 +33,19 @@ def fetch_ncbi_summary(id_list, db="nucleotide"):
     response = requests.get(NCBI_SUMMARY_URL, params=params)
     
     if response.status_code == 200:
-        summaries = response.json()["result"]
+        summaries = response.json().get("result", {})
         return summaries
     else:
         st.error("Failed to fetch gene summary from NCBI. Please try again later.")
         return None
 
-# Function to fetch FASTA data for given NCBI IDs
 def fetch_ncbi_fasta(id_list, db="nucleotide"):
-    """Fetch FASTA sequence data for the given NCBI IDs"""
+    """Fetch FASTA sequence data for the given NCBI IDs."""
     ids = ",".join(id_list)
     params = {
         "db": db,
         "id": ids,
-        "retmode": "text",  # Fetch as text format
+        "retmode": "text",  # Fetch as text
         "rettype": "fasta"  # Return FASTA sequence data
     }
     response = requests.get(NCBI_FETCH_URL, params=params)
@@ -62,7 +59,7 @@ def fetch_ncbi_fasta(id_list, db="nucleotide"):
 # Main Streamlit app function
 def main():
     st.title("NCBI Gene/Sequence Search")
-    
+
     # State to store the current query
     if 'query' not in st.session_state:
         st.session_state.query = ''
@@ -80,7 +77,7 @@ def main():
                     
                     if id_list:
                         # Limit to the first two IDs
-                        id_list = id_list[:2]  # Take the first two results
+                        id_list = id_list[:2]
                         
                         # Fetch gene metadata (gene name)
                         summaries = fetch_ncbi_summary(id_list)
